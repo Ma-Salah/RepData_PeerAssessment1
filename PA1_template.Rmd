@@ -1,25 +1,109 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
 output: 
-  html_document:
-    keep_md: true
+  html_document: 
+    fig_caption: yes
+    keep_md: yes
 ---
+This is Reproducible Research Project 1
+==========================================
 
+For step 1: getting and processing data
 
-## Loading and preprocessing the data
+```{r step1,echo=TRUE}
+library(dplyr)
+mydata <- read.csv("activity.csv", sep = ",")
+mydata <- tbl_df(mydata)
+```
 
+Step 2: Histogram of the total number of steps taken each day
 
+```{r step2, echo=TRUE}
+totalsteps <- tapply(mydata$steps, mydata$date, sum)
+hist(totalsteps, main = "Total number of steps taken each day", col = "red")
+dev.copy(png, file = "Step 2.png")
+dev.off()
+```
 
-## What is mean total number of steps taken per day?
+Step 3: Mean and median number of steps taken each day
+mean
+```{r mean, echo=TRUE}
+tapply(mydata$steps, mydata$date, mean)
+```
+medain
+```{r median, echo=TRUE}
+tapply(mydata$steps, mydata$date, median)
+```
 
+Step 4: Time series plot of the average number of steps taken
+```{r step,echo=TRUE}
+avsteps <-tapply(mydata$steps, mydata$interval, mean, na.rm = TRUE)
+mydata <- transform(mydata, interval = as.factor(interval))
+plot(levels(mydata$interval),avsteps, type = "l", main = "Average number of steps",xlab = "5-minute interval", ylab = "Average of steps in all days")
+dev.copy(png, file = "Step 4.png")
+dev.off()
+```
 
+step 5: The 5-minute interval that, on average, contains the maximum number of steps
+```{r step5,echo=TRUE}
+x <- mydata[max(na.omit(mydata$steps)),"interval"]
+as.numeric(as.character(x))
+```
 
-## What is the average daily activity pattern?
+step 6: Code to describe and show a strategy for imputing missing data
+Number of missing values
+```{r step6, echo=TRUE}
+s <- mydata$steps
+length(s) - length(na.omit(s))
+```
+Filling in all of the missing values with mean values
+```{r echo=TRUE}
+mydata <- transform(mydata, date= as.character(date))
+nas <- which(is.na(mydata$steps))
+df <- na.omit(mydata)
+step <- tapply(df$steps, df$date, sum)
+mean <- mean(step)
+newdata <- mydata
+newdata$steps[nas] <- mean
+```
 
+Step 7: Histogram of the total number of steps taken each day after missing values are imputed
+```{r step7, echo=TRUE}
+newsteps <- tapply(newdata$steps, newdata$date, sum)
+newsteps <- as.numeric(newsteps)
+hist(newsteps, main = "Total number of steps taken each day after missing values are imputed", col = "red")
+```
 
+mean total number of steps taken per day
+```{r echo=TRUE}
+as.integer(tapply(newdata$steps, newdata$date, mean))
+```
 
-## Imputing missing values
+medain total number of steps taken per day
+```{r echo=TRUE}
+as.integer(tapply(newdata$steps, newdata$date, median))
+```
 
+Step 8: Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+```{r step8,echo=TRUE}
+days <- newdata$date
+days <- as.character(days)
+days <- as.Date(days)
+days <- weekdays(days)
+Sys.setlocale("LC_ALL", "English")
+for(i in 1:length(days)){
+     if (days[i]=="Saturday") {days[i] <- "weekend"}
+     else {(days[i] <- "weekday")}
+}
+newdata <- mutate(newdata, days)
+newdata <- transform(newdata, days=as.factor(days))
+wend <- filter(newdata, days=="weekend")
+wday <- filter(newdata, days=="weekday")
+wendm <- tapply(wend$steps, wend$interval, mean)
+wdaym <- tapply(wday$steps, wday$interval, mean)
+```
 
-
-## Are there differences in activity patterns between weekdays and weekends?
+```{r plot,fig.height=4,fig.width=8,fig.show="hold",fig.align="center",fig.path="fig/",tidy=TRUE,eval=TRUE}
+par(mfrow=c(1,2))
+plot(levels(mydata$interval), wendm, ylim = c(1350,1600), type = "l", xlab = "Interval",ylab = "steps", main = "Weekend")
+plot(levels(mydata$interval), wdaym, ylim = c(1350,1600), type = "l", xlab = "Interval",ylab = "steps", main = "Weekday")
+```
